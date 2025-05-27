@@ -83,9 +83,7 @@ pub mod solx {
         let followed = &mut ctx.accounts.followed;
 
         require!(follower.key() != followed.key(), ErrorCode::CanNotFollowYourself);
-
-        require!(followed.key() == author_key, ErrorCode::CanNotUnfollow);
-
+        
         follower.following = follower.following.checked_sub(1).ok_or(error!(ErrorCode::Overflow))?;
         followed.followers = followed.followers.checked_sub(1).ok_or(error!(ErrorCode::Overflow))?;
 

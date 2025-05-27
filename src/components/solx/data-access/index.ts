@@ -170,6 +170,12 @@ export function useSolxProgram() {
       )
 
       const accountInfo = await connection.getAccountInfo(followRelationPda)
+      // console.log('checkFollowRelation', {
+      //   followerKey: followerKey.toBase58(),
+      //   followedKey: followedKey.toBase58(),
+      //   followRelationPda: followRelationPda.toBase58(),
+      // })
+      // console.log('accountInfo', accountInfo)
       return accountInfo !== null
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
@@ -196,8 +202,6 @@ export function useSolxProgram() {
     },
     onSuccess: (signature) => {
       transactionToast(signature)
-      // Обновляем посты текущего пользователя
-      // getUserPosts будет обновлен автоматически благодаря React Query
     },
     onError: (error) => {
       toast.error('Failed to create post')
@@ -252,7 +256,6 @@ export function useSolxProgram() {
         try {
           console.log('Fetching feed for user:', userPublicKey.toBase58())
 
-          // 1. Получаем подписки пользователя
           const [authorPda] = anchor.web3.PublicKey.findProgramAddressSync(
             [userPublicKey.toBuffer()],
             program.programId,
@@ -272,21 +275,16 @@ export function useSolxProgram() {
           if (followings.length === 0) {
             return []
           }
-
-          // 2. Ограничиваем количество авторов для обработки (берем последних подписанных)
           const limitedFollowings = followings.slice(0, maxAuthors)
 
-          // 3. Получаем посты от каждого автора (с ограничением)
           const allPosts = []
 
-          // Обрабатываем авторов батчами для лучшей производительности
           const batchSize = 10
           for (let i = 0; i < limitedFollowings.length; i += batchSize) {
             const batch = limitedFollowings.slice(i, i + batchSize)
 
             const batchPromises = batch.map(async (following) => {
               try {
-                // Получаем только последние посты от каждого автора
                 const posts = await program.account.post.all([
                   {
                     memcmp: {
@@ -296,10 +294,9 @@ export function useSolxProgram() {
                   },
                 ])
 
-                // Сортируем посты автора по времени и берем только последние
                 const sortedPosts = posts
                   .sort((a, b) => b.account.timestamp.toNumber() - a.account.timestamp.toNumber())
-                  .slice(0, 5) // Берем только 5 последних постов от каждого автора
+                  .slice(0, 5)
 
                 return sortedPosts
               } catch (error) {
@@ -325,9 +322,7 @@ export function useSolxProgram() {
           return []
         }
       },
-      // Кешируем на 5 минут
       staleTime: 5 * 60 * 1000,
-      // Рефетчим в фоне каждые 10 минут
       refetchInterval: 10 * 60 * 1000,
     })
   }
@@ -354,11 +349,9 @@ export function useSolxProgram() {
 
           if (followings.length === 0) return []
 
-          // Получаем посты с учетом offset
           const allPosts = []
 
           for (const following of followings.slice(0, 50)) {
-            // Ограничиваем 50 авторами
             try {
               const posts = await program.account.post.all([
                 {
@@ -376,7 +369,6 @@ export function useSolxProgram() {
             }
           }
 
-          // Сортируем и применяем пагинацию
           const sortedPosts = allPosts
             .sort((a, b) => b.account.timestamp.toNumber() - a.account.timestamp.toNumber())
             .slice(offset, offset + 20)

@@ -9,6 +9,7 @@ import { useWallet } from '@solana/wallet-adapter-react'
 import { useSolxProgramAccount } from '../data-access'
 import Link from 'next/link'
 import { Author } from '../model'
+import { useState, useEffect } from 'react'
 
 interface AuthorCardProps {
   author: Author
@@ -20,20 +21,48 @@ interface AuthorCardProps {
 export function AuthorCard({ author, isCurrentUser = false, compact = false, showActions = true }: AuthorCardProps) {
   const { publicKey } = useWallet()
   const { isFollowing, followAuthor, unfollowAuthor } = useSolxProgramAccount({
-    account: author.publicKey,
+    account: publicKey!,
   })
+
+  const [isFollowingState, setIsFollowingState] = useState<boolean>(false)
+  const [isLoadingFollowState, setIsLoadingFollowState] = useState<boolean>(true)
 
   const canFollow = publicKey && !isCurrentUser && showActions
   const profileUrl = `/profile/${author.owner.toBase58()}`
+
+  useEffect(() => {
+    const checkFollowingStatus = async () => {
+      if (canFollow) {
+        try {
+          setIsLoadingFollowState(true)
+          const followingStatus = await isFollowing(author.owner)
+          // console.log('Checking following status for:', author.owner.toBase58())
+          // console.log('Following status:', followingStatus)
+          setIsFollowingState(followingStatus)
+        } catch (error) {
+          console.error('Error checking following status:', error)
+          setIsFollowingState(false)
+        } finally {
+          setIsLoadingFollowState(false)
+        }
+      } else {
+        setIsLoadingFollowState(false)
+      }
+    }
+
+    checkFollowingStatus()
+  }, [author.owner, canFollow, isFollowing])
 
   const handleFollowClick = async () => {
     if (!canFollow) return
 
     try {
-      if (isFollowing(author.owner)) {
-        await unfollowAuthor.mutateAsync({ authorKey: author.publicKey })
+      if (isFollowingState) {
+        await unfollowAuthor.mutateAsync({ authorKey: author.owner })
+        setIsFollowingState(false)
       } else {
-        await followAuthor.mutateAsync({ authorKey: author.publicKey })
+        await followAuthor.mutateAsync({ authorKey: author.owner })
+        setIsFollowingState(true)
       }
     } catch (error) {
       console.error('Follow/unfollow error:', error)
@@ -89,13 +118,13 @@ export function AuthorCard({ author, isCurrentUser = false, compact = false, sho
         {canFollow && (
           <div className="flex gap-2 pt-2">
             <Button
-              variant={isFollowing(author.owner) ? 'outline' : 'default'}
+              variant={isFollowingState ? 'outline' : 'default'}
               size="sm"
               onClick={handleFollowClick}
-              disabled={followAuthor.isPending || unfollowAuthor.isPending}
+              disabled={followAuthor.isPending || unfollowAuthor.isPending || isLoadingFollowState}
               className="flex-1"
             >
-              {isFollowing(author.owner) ? (
+              {isFollowingState ? (
                 <>
                   <UserMinus className="h-4 w-4 mr-1" />
                   Unfollow
