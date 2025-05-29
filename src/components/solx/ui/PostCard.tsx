@@ -24,9 +24,11 @@ interface PostCardProps {
 
 export function PostCard({ post, showAuthor = true, authorName }: PostCardProps) {
   const { publicKey } = useWallet()
-  const { deletePost } = useSolxProgram()
+  const { deletePost, useAuthorByPublicKey } = useSolxProgram()
 
-  const isOwnPost = publicKey && publicKey.equals(post.author)
+  const author = useAuthorByPublicKey(publicKey || undefined)
+
+  const isOwnPost = author?.data?.publicKey.equals(post.author)
   const postDate = new Date(post.timestamp).toLocaleDateString()
   const postTime = new Date(post.timestamp).toLocaleTimeString()
 
@@ -35,7 +37,7 @@ export function PostCard({ post, showAuthor = true, authorName }: PostCardProps)
 
     try {
       await deletePost.mutateAsync({
-        postId: post.timestamp, // Используем timestamp как ID
+        postId: post.timestamp,
         postPublicKey: post.publicKey,
       })
     } catch (error) {

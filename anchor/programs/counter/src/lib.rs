@@ -136,7 +136,7 @@ pub struct CreatePost<'info> {
 #[derive(Accounts)]
 #[instruction(id: u64)]
 pub struct DeletePost<'info> {
-    #[account(mut, seeds = [author.key().as_ref()], bump, has_one = owner)]
+    #[account(mut, seeds = [owner.key().as_ref()], bump, has_one = owner)]
     pub author: Account<'info, Author>,
     #[account(mut, seeds = [b"post",author.key().as_ref(), id.to_le_bytes().as_ref()], bump, close = owner)]
     pub post: Account<'info, Post>,

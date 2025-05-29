@@ -153,7 +153,7 @@ export type Solx = {
             "seeds": [
               {
                 "kind": "account",
-                "path": "author"
+                "path": "owner"
               }
             ]
           }

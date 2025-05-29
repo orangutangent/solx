@@ -76,6 +76,54 @@ export function useSolxProgram() {
     },
   })
 
+  const editName = useMutation<string, unknown, { name: string }>({
+    mutationKey: ['edit-author-name', { cluster }],
+    mutationFn: ({ name }) => {
+      const [authorPda] = anchor.web3.PublicKey.findProgramAddressSync(
+        [provider.wallet.publicKey.toBuffer()],
+        program.programId,
+      )
+      return program.methods
+        .editName(name)
+        .accounts({
+          author: authorPda,
+        })
+        .rpc()
+    },
+    onSuccess: (signature) => {
+      transactionToast(signature)
+      return getAuthors.refetch()
+    },
+    onError: (error) => {
+      toast.error('Failed to edit author name')
+      console.error(error)
+    },
+  })
+
+  const editBio = useMutation<string, unknown, { bio: string }>({
+    mutationKey: ['edit-author-bio', { cluster }],
+    mutationFn: ({ bio }) => {
+      const [authorPda] = anchor.web3.PublicKey.findProgramAddressSync(
+        [provider.wallet.publicKey.toBuffer()],
+        program.programId,
+      )
+      return program.methods
+        .editBio(bio)
+        .accounts({
+          author: authorPda,
+        })
+        .rpc()
+    },
+    onSuccess: (signature) => {
+      transactionToast(signature)
+      return getAuthors.refetch()
+    },
+    onError: (error) => {
+      toast.error('Failed to edit author bio')
+      console.error(error)
+    },
+  })
+
   const useUserPosts = (userPublicKey?: PublicKey) => {
     return useQuery({
       queryKey: ['user-posts', { cluster, userPublicKey: userPublicKey?.toBase58() }],
@@ -143,6 +191,7 @@ export function useSolxProgram() {
     return useQuery({
       queryKey: ['author', { cluster, userPublicKey: userPublicKey?.toBase58() }],
       enabled: !!userPublicKey,
+
       queryFn: async () => {
         if (!userPublicKey) return null
 
@@ -151,7 +200,11 @@ export function useSolxProgram() {
             [userPublicKey.toBuffer()],
             program.programId,
           )
-          return await program.account.author.fetch(authorPda)
+          const authorAccount = await program.account.author.fetch(authorPda)
+          return {
+            ...authorAccount,
+            publicKey: authorPda,
+          }
         } catch (error) {
           console.error('Author not found:', error)
           return null
@@ -223,7 +276,7 @@ export function useSolxProgram() {
           author: authorPda,
           post: postPublicKey,
           owner: provider.wallet.publicKey,
-          systemProgram: anchor.web3.SystemProgram.programId,
+          // systemProgram: anchor.web3.SystemProgram.programId,
         })
         .rpc()
     },
@@ -396,7 +449,8 @@ export function useSolxProgram() {
     checkFollowRelation,
     createPost,
     deletePost,
-
+    editName,
+    editBio,
     useLoadMoreFeed,
     useUserFeed,
   }
